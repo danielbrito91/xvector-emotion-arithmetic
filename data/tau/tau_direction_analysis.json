@@ -1,0 +1,90 @@
+{
+  "tau_dir": "data/tau",
+  "norms": {
+    "single0017": {
+      "angry": 2.5727756023406982,
+      "happy": 3.3633060455322266,
+      "sad": 2.887969970703125
+    },
+    "avg4spk": {
+      "angry": 1.633486270904541,
+      "happy": 2.0201375484466553,
+      "sad": 1.1548736095428467
+    }
+  },
+  "pairwise_cosines": {
+    "single0017": {
+      "cos(\u03c4_angry, \u03c4_happy)": 0.7162797451019287,
+      "cos(\u03c4_angry, \u03c4_sad)": 0.3480522632598877,
+      "cos(\u03c4_happy, \u03c4_sad)": 0.578366219997406
+    },
+    "avg4spk": {
+      "cos(\u03c4_angry, \u03c4_happy)": 0.6079946756362915,
+      "cos(\u03c4_angry, \u03c4_sad)": 0.21138915419578552,
+      "cos(\u03c4_happy, \u03c4_sad)": 0.24094314873218536
+    }
+  },
+  "config_speakers": {
+    "single0017": [
+      "0017"
+    ],
+    "avg4spk": [
+      "0011",
+      "0014",
+      "0017",
+      "0020"
+    ]
+  },
+  "tau_stats": {
+    "single0017": {
+      "angry": {
+        "tau_norm": 2.5727756023406982,
+        "neutral_norm": 16.695711135864258,
+        "emo_norm": 16.89151954650879,
+        "cos_neutral_emo": 0.9883325099945068,
+        "tau_over_neutral": 0.15409798920154572
+      },
+      "happy": {
+        "tau_norm": 3.3633060455322266,
+        "neutral_norm": 16.695711135864258,
+        "emo_norm": 16.87351417541504,
+        "cos_neutral_emo": 0.9799794554710388,
+        "tau_over_neutral": 0.20144730806350708
+      },
+      "sad": {
+        "tau_norm": 2.887969970703125,
+        "neutral_norm": 16.695711135864258,
+        "emo_norm": 16.851877212524414,
+        "cos_neutral_emo": 0.9852216243743896,
+        "tau_over_neutral": 0.1729767620563507
+      }
+    },
+    "avg4spk": {
+      "angry": {
+        "tau_norm": 1.633486270904541,
+        "neutral_norm": 16.358572006225586,
+        "emo_norm": 16.586328506469727,
+        "cos_neutral_emo": 0.9951784610748291,
+        "tau_over_neutral": 0.09985506534576416
+      },
+      "happy": {
+        "tau_norm": 2.0201375484466553,
+        "neutral_norm": 16.358572006225586,
+        "emo_norm": 16.493377685546875,
+        "cos_neutral_emo": 0.992470920085907,
+        "tau_over_neutral": 0.123491071164608
+      },
+      "sad": {
+        "tau_norm": 1.1548736095428467,
+        "neutral_norm": 16.358572006225586,
+        "emo_norm": 16.254297256469727,
+        "cos_neutral_emo": 0.9975123405456543,
+        "tau_over_neutral": 0.07059745490550995
+      }
+    }
+  },
+  "markdown": {
+    "norms": "| \u03c4 variant | \u2016\u03c4_angry\u2016 | \u2016\u03c4_happy\u2016 | \u2016\u03c4_sad\u2016 |\n|---|---|---|---|\n| single0017 | 2.5728 | 3.3633 | 2.8880 |\n| avg4spk | 1.6335 | 2.0201 | 1.1549 |\n",
+    "pairwise_cosines": "| \u03c4 variant | cos(\u03c4_angry, \u03c4_happy) | cos(\u03c4_angry, \u03c4_sad) | cos(\u03c4_happy, \u03c4_sad) |\n|---|---|---|---|\n| single0017 | +0.7163 | +0.3481 | +0.5784 |\n| avg4spk | +0.6080 | +0.2114 | +0.2409 |\n"
+  }
+}

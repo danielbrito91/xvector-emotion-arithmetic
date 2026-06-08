@@ -1,0 +1,79 @@
+[project]
+name = "qwen3-tts"
+version = "0.1.0"
+description = "Training-free task-vector arithmetic over the speaker x-vector for cross-speaker and cross-lingual emotional control in LM-TTS (Qwen3-TTS)."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "funasr>=1.3.1",
+    "hf-transfer>=0.1.9",
+    "huggingface-hub[cli]>=0.36.0",
+    "ipykernel>=7.1.0",
+    "matplotlib>=3.10.8",
+    "modelscope>=1.34.0",
+    "pandas>=3.0.0",
+    "peft>=0.18.1",
+    "qwen-tts>=0.1.1",
+    "seaborn>=0.13.2",
+    "torch>=2.10.0",
+    "torchcodec>=0.10.0",
+    "tqdm>=4.66.0",
+    "transformers>=4.45.0",
+    "accelerate>=1.0.0",
+    "torchmetrics[audio]>=1.9.0",
+    "evaluate>=0.4.6",
+    "jiwer>=4.0.0",
+    "whisper-normalizer>=0.1.12",
+    "utmosv2[optional]",
+    "tabulate>=0.10.0",
+    "typer>=0.21.1",
+]
+
+[dependency-groups]
+dev = [
+    "nbformat>=5.10.4",
+    "plotly-express>=0.4.1",
+    "ruff>=0.14.14",
+    "taskipy>=1.14.1",
+    "ty>=0.0.14",
+]
+
+
+[tool.ruff]
+line-length = 99
+extend-exclude = ['notebooks']
+
+
+[tool.ruff.lint]
+preview = true
+select = ['I', 'F', 'E', 'W', 'PT', 'PD']
+
+[tool.ruff.format]
+preview = true
+quote-style = 'single'
+
+[tool.taskipy.tasks]
+lint = 'ruff check . && ruff check . --diff'
+format = 'ruff check . --fix && ruff format . && ty check'
+
+# --- Paper reproduction pipeline (see README) ---
+extract_tau = 'PYTHONPATH=. python scripts/repro/extract_xvec_tau.py --esd_dir /home/daniel/data/processed/esd_24k --speakers 0011 0014 0017 0020 --emotions Angry Happy Sad --n_pairs 50 --output_dir data/tau'
+extract_tau_single = 'PYTHONPATH=. python scripts/repro/extract_xvec_tau.py --esd_dir /home/daniel/data/processed/esd_24k --speakers 0017 --emotions Angry Happy Sad --n_pairs 50 --output_dir data/tau'
+tau_geometry = 'PYTHONPATH=. python scripts/repro/analyze_tau_directions.py'
+en2en = 'PYTHONPATH=. python scripts/repro/run_en2en_sweep.py'
+ptbr = 'PYTHONPATH=. python scripts/repro/run_ptbr_sweep.py'
+ceiling_en = 'PYTHONPATH=. python scripts/repro/compute_gt_ceiling.py'
+ceiling_ptbr = 'PYTHONPATH=. python scripts/repro/compute_gt_ceiling_ptbr.py'
+add_utmos = 'PYTHONPATH=. python scripts/repro/add_utmos_to_results.py'
+
+# --- Data preparation ---
+prepare_esd = 'PYTHONPATH=. python scripts/data/prepare_esd_jsonl.py --esd_path "/home/daniel/data/external/Emotional Speech Dataset (ESD)/Emotion Speech Dataset" --output_dir data/esd --speakers 0017 --emotions Neutral Angry Happy Sad Surprise'
+resample_esd = 'PYTHONPATH=. python scripts/data/resample_esd.py --esd_path "/home/daniel/data/external/Emotional Speech Dataset (ESD)/Emotion Speech Dataset" --output_dir /home/daniel/data/processed/esd_24k --speakers 0017 --emotions Neutral Angry Happy Sad Surprise'
+prepare_esd_24k = 'PYTHONPATH=. python scripts/data/prepare_esd_jsonl.py --esd_path /home/daniel/data/processed/esd_24k --output_dir data/esd --speakers 0017 --emotions Neutral Angry Happy Sad Surprise'
+transcribe_emouerj = 'PYTHONPATH=. python scripts/data/transcribe_emouerj.py'
+
+# --- Elimination study (Stages 1-3) ---
+exp01 = 'PYTHONPATH=. python scripts/elimination/exp01.py'
+
+[tool.uv.sources]
+utmosv2 = { git = "https://github.com/sarulab-speech/UTMOSv2.git" }
