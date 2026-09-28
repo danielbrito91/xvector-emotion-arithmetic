@@ -1,0 +1,120 @@
+{
+  "alpha": {
+    "angry": 2.5,
+    "happy": 1.5,
+    "sad": 2.5
+  },
+  "alpha_provenance": "data/experiments/icassp_objective.json",
+  "bootstrap_replicates": 10000,
+  "bootstrap_seed": 20260908,
+  "conditions": [
+    "neutral",
+    "angry",
+    "happy",
+    "sad"
+  ],
+  "corpora": {
+    "crema_d": {
+      "intensity": "XX",
+      "label_map": {
+        "ANG": "angry",
+        "HAP": "happy",
+        "NEU": "neutral",
+        "SAD": "sad"
+      },
+      "language": "en",
+      "pilot_text_id": "WSI",
+      "reference_text_ids": [
+        "IEO"
+      ],
+      "sex_balance": {
+        "Female": 6,
+        "Male": 6
+      },
+      "speaker_selection": "eligible actors sorted within sex by sha256('20260907|crema_d|' + ActorID), then first six per sex",
+      "speakers_n": 12,
+      "synthesis_text_ids": [
+        "DFA",
+        "IOM",
+        "ITH",
+        "ITS",
+        "IWL",
+        "IWW"
+      ]
+    },
+    "verbo": {
+      "label_map": {
+        "ale": "happy",
+        "neu": "neutral",
+        "rai": "angry",
+        "tri": "sad"
+      },
+      "language": "pt",
+      "pilot_speaker_ids": [
+        "f1",
+        "m1"
+      ],
+      "pilot_text_id": "q2",
+      "reference_text_ids": [
+        "l5"
+      ],
+      "speaker_ids": [
+        "f1",
+        "f2",
+        "f3",
+        "f4",
+        "f5",
+        "f6",
+        "m1",
+        "m2",
+        "m3",
+        "m4",
+        "m5",
+        "m6"
+      ],
+      "speakers_n": 12,
+      "synthesis_text_ids": [
+        "s1",
+        "l1",
+        "l2",
+        "l3",
+        "l4",
+        "q1"
+      ]
+    }
+  },
+  "generation_language": "Auto",
+  "include_utmos": false,
+  "max_new_tokens": 2048,
+  "model": "Qwen3-TTS-12Hz-1.7B-Base",
+  "primary_contrasts": [
+    "crema_d:edit-minus-neutral:macro-emotion",
+    "verbo:edit-minus-neutral:macro-emotion"
+  ],
+  "primary_metric": "eca_sv_4way",
+  "report_ci": 0.95,
+  "seed_master": 20260907,
+  "seed_replicates": [
+    0,
+    1,
+    2
+  ],
+  "simultaneous_primary_ci_per_contrast": 0.975,
+  "tau_files": {
+    "angry": {
+      "path": "data/tau/tau_angry_avg4spk.pt",
+      "sha256": "60ba6cb081d6b750724745b89d72825508f20c776f2c2ae1bc7a81d734c60067"
+    },
+    "happy": {
+      "path": "data/tau/tau_happy_avg4spk.pt",
+      "sha256": "1515558d9f22e780be89e7c3e99d08473ddebb63043878f2e0b5d766cea4993e"
+    },
+    "sad": {
+      "path": "data/tau/tau_sad_avg4spk.pt",
+      "sha256": "b2694a8e46aae5a3d9b98910a9cfcdd0f632966a0ab3df0b68df68e38e06c840"
+    }
+  },
+  "tau_variant": "avg4spk",
+  "version": 1,
+  "x_vector_only_mode": false
+}

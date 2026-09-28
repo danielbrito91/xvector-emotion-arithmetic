@@ -28,10 +28,16 @@ data/tau/*
 # Local working material kept out of the public repo
 docs/
 paper/
-paper_02/
+paper_*/
 notebooks/
 *.pdf
 grafico_rinha_*.html
 
 # Cursor/Claude tooling
 .claudeignore
+
+# Pacotes do manuscrito e configuração local
+paper_*.zip
+.env
+.env.*
+.pytest_cache/
