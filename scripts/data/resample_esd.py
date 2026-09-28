@@ -1,14 +1,4 @@
-"""
-Resample ESD wav files from 16kHz to 24kHz.
-
-Usage:
-    python resample_esd.py \
-        --esd_path "/home/daniel/data/external/Emotional Speech Dataset (ESD)/Emotion Speech Dataset" \
-        --output_dir /home/daniel/data/processed/esd_24k \
-        --speakers 0011 \
-        --emotions Neutral Angry \
-        --target_sr 24000
-"""
+"""Reamostra os arquivos do ESD e copia as transcrições para a pasta de saída."""
 
 import argparse
 import os
@@ -46,6 +36,7 @@ def resample_speaker_emotion(
 def copy_transcript(esd_path: str, output_dir: str, speaker: str):
     """Copy transcript file unchanged (it has no audio, just text)."""
     import shutil
+
     src = os.path.join(esd_path, speaker, f'{speaker}.txt')
     dst_dir = os.path.join(output_dir, speaker)
     os.makedirs(dst_dir, exist_ok=True)
@@ -77,7 +68,7 @@ def main():
 
     print(f'\nDone. {total} files resampled.')
     print(f'\nNext: regenerate JSONLs pointing to {args.output_dir}')
-    print(f'  uv run task prepare_esd_24k')
+    print('  uv run task prepare_esd_24k')
 
 
 if __name__ == '__main__':

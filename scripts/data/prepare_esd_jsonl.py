@@ -1,26 +1,6 @@
-"""
-Prepare ESD (Emotional Speech Dataset) into Qwen3-TTS fine-tuning JSONL format.
+"""Prepara JSONLs do ESD por falante e emoção para fine-tuning do Qwen3-TTS.
 
-For task vector experiments, we need per-speaker, per-emotion JSONLs:
-  - Speaker X, Neutral  → fine-tune → checkpoint_neutral
-  - Speaker X, Angry    → fine-tune → checkpoint_angry
-  - τ_angry = checkpoint_angry - checkpoint_neutral
-
-The Qwen3-TTS raw JSONL format requires:
-  - audio: path to target utterance wav
-  - text: transcript
-  - ref_audio: path to reference speaker audio (same for all samples)
-
-Then run prepare_data.py to add audio_codes before fine-tuning.
-
-Usage:
-    python prepare_esd_jsonl.py \
-        --esd_path \
-            "/home/daniel/data/external/Emotional Speech Dataset (ESD)/Emotion Speech Dataset" \
-        --output_dir /home/daniel/data/processed/esd_qwen3 \
-        --speakers 0011 \
-        --emotions Neutral Angry Happy Sad Surprise
-"""
+Cada registro contém audio, text e ref_audio; prepare_data.py acrescenta audio_codes."""
 
 import argparse
 import json
@@ -59,12 +39,7 @@ def get_wav_files(speaker_dir: str, emotion: str) -> list[str]:
 
 
 def select_ref_audio(wav_files: list[str], idx: int = 0) -> str:
-    """Select a reference audio file.
-
-    Per Qwen docs: 'use the same ref_audio for all samples' for consistency.
-    We pick the first file by default — you might want to pick one manually
-    that sounds clean and representative.
-    """
+    """Seleciona o primeiro áudio como referência compartilhada pelo conjunto."""
     return wav_files[idx]
 
 
@@ -80,14 +55,13 @@ def build_jsonl_entries(
     entries = []
 
     for wav_path in wav_files:
-        stem = Path(wav_path).stem  # e.g., "0011_000001"
+        stem = Path(wav_path).stem
         if stem not in transcripts:
             print(f'  WARNING: no transcript for {stem}, skipping')
             continue
 
         text, transcript_emotion = transcripts[stem]
 
-        # Sanity check: transcript emotion should match directory
         if transcript_emotion != emotion:
             print(
                 f'  WARNING: {stem} transcript says {transcript_emotion!r} '

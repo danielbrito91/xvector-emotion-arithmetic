@@ -42,7 +42,6 @@ def experiment_emotion(model: Qwen3TTSModel) -> dict:
         ref_audio = ref['audio']
         ref_text = ref['text']
 
-        # Generate speech with x_vector_only_true
         wavs, sr = model.generate_voice_clone(
             text=TEXT_TO_SYNTHESIZE,
             language=LANGUAGE,
@@ -51,18 +50,15 @@ def experiment_emotion(model: Qwen3TTSModel) -> dict:
             max_new_tokens=2048,
             temperature=TEMPERATURA,
         )
-        # Save output
         output_path = f'data/outputs/exp01_ref-{emotion}_vector_only.wav'
         sf.write(output_path, wavs[0], sr)
         print(f'Saved {emotion} audio to {output_path}')
 
-        # Compara spk sim
         spk_sim = compare_speaker_similarity(ref_audio, output_path)
         emo_sim = compare_emotions(ref_audio, output_path)
         final_results['speaker_similarity'][f'{emotion}_x_vector_only'] = spk_sim
         final_results['emotion_similarity'][f'{emotion}_x_vector_only'] = emo_sim
 
-        # Generate speech with ref_text
         wavs, sr = model.generate_voice_clone(
             text=TEXT_TO_SYNTHESIZE,
             language=LANGUAGE,
@@ -72,7 +68,6 @@ def experiment_emotion(model: Qwen3TTSModel) -> dict:
             max_new_tokens=2048,
             temperature=TEMPERATURA,
         )
-        # Save output
         output_path = f'data/outputs/exp01_ref-{emotion}_with_text.wav'
         sf.write(output_path, wavs[0], sr)
         print(f'Saved {emotion} audio to {output_path}')

@@ -1,9 +1,4 @@
-"""Shared aggregation + markdown rendering for the α-sweep experiments.
-
-Both the EN→EN and EN→PT-BR sweeps (scripts/repro/run_*_sweep.py) and the
-PT-BR ground-truth ceiling produce the same per-cell results structure, so the
-summary table builders live here instead of inside a single CLI script.
-"""
+"""Agrega os sweeps de alpha e gera tabelas por célula experimental."""
 
 from __future__ import annotations
 
@@ -13,9 +8,14 @@ import statistics
 def aggregate_over_sentences(cell: dict, alphas: list[float]) -> dict:
     """Mean ± stderr per α over the sentences of one cell; best α by emo_cos_sim_gt."""
     metric_keys = [
-        'emo_cos_sim_gt', 'xvec_cos_sim_gt',
-        'spk_cos_sim_neutral_qwen', 'spk_cos_sim_neutral_wavlm',
-        'xvec_cos_sim_gt_wavlm', 'wer_raw', 'wer_norm', 'utmos',
+        'emo_cos_sim_gt',
+        'xvec_cos_sim_gt',
+        'spk_cos_sim_neutral_qwen',
+        'spk_cos_sim_neutral_wavlm',
+        'xvec_cos_sim_gt_wavlm',
+        'wer_raw',
+        'wer_norm',
+        'utmos',
     ]
     out: dict = {'per_alpha': {}}
     for alpha in alphas:
@@ -79,13 +79,16 @@ def build_summary(all_results: dict) -> dict:
                 'emo_cos_sim_gt': (m(blk, 'emo_cos_sim_gt'), se(blk, 'emo_cos_sim_gt')),
                 'xvec_cos_sim_gt': (m(blk, 'xvec_cos_sim_gt'), se(blk, 'xvec_cos_sim_gt')),
                 'spk_cos_sim_neutral_qwen': (
-                    m(blk, 'spk_cos_sim_neutral_qwen'), se(blk, 'spk_cos_sim_neutral_qwen'),
+                    m(blk, 'spk_cos_sim_neutral_qwen'),
+                    se(blk, 'spk_cos_sim_neutral_qwen'),
                 ),
                 'spk_cos_sim_neutral_wavlm': (
-                    m(blk, 'spk_cos_sim_neutral_wavlm'), se(blk, 'spk_cos_sim_neutral_wavlm'),
+                    m(blk, 'spk_cos_sim_neutral_wavlm'),
+                    se(blk, 'spk_cos_sim_neutral_wavlm'),
                 ),
                 'xvec_cos_sim_gt_wavlm': (
-                    m(blk, 'xvec_cos_sim_gt_wavlm'), se(blk, 'xvec_cos_sim_gt_wavlm'),
+                    m(blk, 'xvec_cos_sim_gt_wavlm'),
+                    se(blk, 'xvec_cos_sim_gt_wavlm'),
                 ),
                 'wer_raw': (m(blk, 'wer_raw'), se(blk, 'wer_raw')),
                 'wer_norm': (m(blk, 'wer_norm'), se(blk, 'wer_norm')),
@@ -114,8 +117,7 @@ def render_markdown(summary: dict) -> str:
         summary['best_per_cell'], key=lambda r: (r['target'], r['tau_variant'], r['emotion'])
     )
     baselines = {
-        (r['target'], r['tau_variant'], r['emotion']): r
-        for r in summary['baseline_per_cell']
+        (r['target'], r['tau_variant'], r['emotion']): r for r in summary['baseline_per_cell']
     }
     head = (
         '# EN→EN cross-speaker α-sweep (n=30, ESD test split 321–350)\n\n'
@@ -127,11 +129,11 @@ def render_markdown(summary: dict) -> str:
 
     def row_md(r, alpha_label):
         return (
-            f"| {r['target']} | {r['tau_variant']} | {r['emotion']} | {alpha_label} | "
-            f"{r['n']} | {_fmt(r['emo_cos_sim_gt'])} | {_fmt(r['xvec_cos_sim_gt'])} | "
-            f"{_fmt(r['spk_cos_sim_neutral_qwen'])} | {_fmt(r['spk_cos_sim_neutral_wavlm'])} | "
-            f"{_fmt(r['utmos'], '{:.3f}')} | "
-            f"{_fmt(r['wer_raw'], '{:.3f}')} | {_fmt(r['wer_norm'], '{:.3f}')} |\n"
+            f'| {r["target"]} | {r["tau_variant"]} | {r["emotion"]} | {alpha_label} | '
+            f'{r["n"]} | {_fmt(r["emo_cos_sim_gt"])} | {_fmt(r["xvec_cos_sim_gt"])} | '
+            f'{_fmt(r["spk_cos_sim_neutral_qwen"])} | {_fmt(r["spk_cos_sim_neutral_wavlm"])} | '
+            f'{_fmt(r["utmos"], "{:.3f}")} | '
+            f'{_fmt(r["wer_raw"], "{:.3f}")} | {_fmt(r["wer_norm"], "{:.3f}")} |\n'
         )
 
     body = ''.join(row_md(r, r['alpha']) for r in rows)
@@ -148,11 +150,11 @@ def render_markdown(summary: dict) -> str:
         if not b:
             continue
         body_base += (
-            f"| {b['target']} | {b['tau_variant']} | {b['emotion']} | {b['n']} | "
-            f"{_fmt(b['emo_cos_sim_gt'])} | {_fmt(b['xvec_cos_sim_gt'])} | "
-            f"{_fmt(b['spk_cos_sim_neutral_qwen'])} | {_fmt(b['spk_cos_sim_neutral_wavlm'])} | "
-            f"{_fmt(b['utmos'], '{:.3f}')} | "
-            f"{_fmt(b['wer_raw'], '{:.3f}')} | {_fmt(b['wer_norm'], '{:.3f}')} |\n"
+            f'| {b["target"]} | {b["tau_variant"]} | {b["emotion"]} | {b["n"]} | '
+            f'{_fmt(b["emo_cos_sim_gt"])} | {_fmt(b["xvec_cos_sim_gt"])} | '
+            f'{_fmt(b["spk_cos_sim_neutral_qwen"])} | {_fmt(b["spk_cos_sim_neutral_wavlm"])} | '
+            f'{_fmt(b["utmos"], "{:.3f}")} | '
+            f'{_fmt(b["wer_raw"], "{:.3f}")} | {_fmt(b["wer_norm"], "{:.3f}")} |\n'
         )
 
     note = (

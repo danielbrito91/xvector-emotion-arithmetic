@@ -25,22 +25,22 @@ def train():
     global target_speaker_embedding
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--init_model_path", type=str, default="Qwen/Qwen3-TTS-12Hz-1.7B-Base")
-    parser.add_argument("--output_model_path", type=str, default="output")
-    parser.add_argument("--train_jsonl", type=str, required=True)
-    parser.add_argument("--batch_size", type=int, default=2)
-    parser.add_argument("--lr", type=float, default=2e-6)
-    parser.add_argument("--num_epochs", type=int, default=5)
-    parser.add_argument("--speaker_name", type=str, default="speaker_test")
-    parser.add_argument("--lora_r", type=int, default=64)
-    parser.add_argument("--lora_alpha", type=int, default=128)
-    parser.add_argument("--lora_dropout", type=float, default=0.05)
+    parser.add_argument('--init_model_path', type=str, default='Qwen/Qwen3-TTS-12Hz-1.7B-Base')
+    parser.add_argument('--output_model_path', type=str, default='output')
+    parser.add_argument('--train_jsonl', type=str, required=True)
+    parser.add_argument('--batch_size', type=int, default=2)
+    parser.add_argument('--lr', type=float, default=2e-6)
+    parser.add_argument('--num_epochs', type=int, default=5)
+    parser.add_argument('--speaker_name', type=str, default='speaker_test')
+    parser.add_argument('--lora_r', type=int, default=64)
+    parser.add_argument('--lora_alpha', type=int, default=128)
+    parser.add_argument('--lora_dropout', type=float, default=0.05)
     args = parser.parse_args()
 
     accelerator = Accelerator(
         gradient_accumulation_steps=4,
-        mixed_precision="bf16",
-        log_with="tensorboard",
+        mixed_precision='bf16',
+        log_with='tensorboard',
         project_dir=args.output_model_path,
     )
 
@@ -51,7 +51,7 @@ def train():
     qwen3tts = Qwen3TTSModel.from_pretrained(
         MODEL_PATH,
         torch_dtype=torch.bfloat16,
-        attn_implementation="sdpa",
+        attn_implementation='sdpa',
     )
     config = AutoConfig.from_pretrained(MODEL_PATH)
 
@@ -62,11 +62,15 @@ def train():
         r=args.lora_r,
         lora_alpha=args.lora_alpha,
         target_modules=[
-            "q_proj", "k_proj", "v_proj", "o_proj",
-            "codec_head",
-        ] + [f"lm_head.{i}" for i in range(15)],
+            'q_proj',
+            'k_proj',
+            'v_proj',
+            'o_proj',
+            'codec_head',
+        ]
+        + [f'lm_head.{i}' for i in range(15)],
         lora_dropout=args.lora_dropout,
-        bias="none",
+        bias='none',
     )
     qwen3tts.model.talker = get_peft_model(qwen3tts.model.talker, lora_config)
     qwen3tts.model.talker.print_trainable_parameters()
@@ -147,8 +151,8 @@ def train():
                 talker_hidden_states = hidden_states[codec_mask[:, :-1]]
                 talker_codec_ids = codec_ids[codec_mask]
 
-                sub_talker_logits, sub_talker_loss = (
-                    model.talker.forward_sub_talker_finetune(talker_codec_ids, talker_hidden_states)
+                sub_talker_logits, sub_talker_loss = model.talker.forward_sub_talker_finetune(
+                    talker_codec_ids, talker_hidden_states
                 )
 
                 loss = outputs.loss + 0.3 * sub_talker_loss
@@ -161,37 +165,34 @@ def train():
                 optimizer.zero_grad()
 
             if step % 10 == 0:
-                accelerator.print(f"Epoch {epoch} | Step {step} | Loss: {loss.item():.4f}")
+                accelerator.print(f'Epoch {epoch} | Step {step} | Loss: {loss.item():.4f}')
 
         if accelerator.is_main_process:
-            output_dir = os.path.join(args.output_model_path, f"checkpoint-epoch-{epoch}")
+            output_dir = os.path.join(args.output_model_path, f'checkpoint-epoch-{epoch}')
             os.makedirs(output_dir, exist_ok=True)
 
-            # Save only the LoRA adapter weights
             unwrapped_model = accelerator.unwrap_model(model)
             unwrapped_model.talker.save_pretrained(output_dir)
 
-            # Save speaker embedding for inference
             torch.save(
                 target_speaker_embedding,
-                os.path.join(output_dir, "speaker_embedding.pt"),
+                os.path.join(output_dir, 'speaker_embedding.pt'),
             )
 
-            # Save config with custom_voice speaker slot
-            input_config_file = os.path.join(MODEL_PATH, "config.json")
-            output_config_file = os.path.join(output_dir, "config.json")
+            input_config_file = os.path.join(MODEL_PATH, 'config.json')
+            output_config_file = os.path.join(output_dir, 'config.json')
             with open(input_config_file, 'r', encoding='utf-8') as f:
                 config_dict = json.load(f)
-            config_dict["tts_model_type"] = "custom_voice"
-            talker_config = config_dict.get("talker_config", {})
-            talker_config["spk_id"] = {args.speaker_name: 3000}
-            talker_config["spk_is_dialect"] = {args.speaker_name: False}
-            config_dict["talker_config"] = talker_config
+            config_dict['tts_model_type'] = 'custom_voice'
+            talker_config = config_dict.get('talker_config', {})
+            talker_config['spk_id'] = {args.speaker_name: 3000}
+            talker_config['spk_is_dialect'] = {args.speaker_name: False}
+            config_dict['talker_config'] = talker_config
             with open(output_config_file, 'w', encoding='utf-8') as f:
                 json.dump(config_dict, f, indent=2, ensure_ascii=False)
 
-            accelerator.print(f"Saved LoRA adapter to {output_dir}")
+            accelerator.print(f'Saved LoRA adapter to {output_dir}')
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     train()

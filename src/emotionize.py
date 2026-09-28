@@ -1,21 +1,7 @@
-"""Deploy-time helper: turn any base audio into an emotion-shifted clone.
+"""Sintetiza uma voz com x_target + alpha*tau a partir de áudio de referência.
 
-Pipeline (mirrors `scripts/run_ptbr_sweep.py`, single-utt edition):
-
-    1. ffmpeg-preprocess input → 24 kHz mono WAV with N dB of headroom
-       (avoids 44.1k→24k overshoot + clip; cf. session_report_2026-05-21 §8).
-    2. Optional Whisper transcription → `ref_text` (= `synth_text` by default).
-    3. Extract base x-vec via Qwen3-TTS ECAPA speaker encoder.
-    4. Hybrid x-vec = base + α · τ  (τ from `data/tau/tau_{emotion}_{variant}.pt`).
-    5. Voice-clone synth with the hybrid x-vec, save with peak-norm guard.
-
-Recommended defaults follow §4.2 of session_report_2026-05-21:
-  - `tau_variant = "avg4spk"`  (preserves identity better cross-lingual)
-  - `alpha       = 2.5`         (best-α for PT-BR angry in m03/m04 paired)
-
-API entry point: `emotionize_audio(...)`. Single dict argument is RORO-friendly
-but, since most callers want positional defaults, we expose keyword args.
-"""
+Converte a entrada para 24 kHz mono com margem de pico e transcreve com Whisper
+quando ref_text não é fornecido. As direções são carregadas de data/tau/."""
 
 from __future__ import annotations
 
@@ -63,21 +49,14 @@ class EmotionizeResult:
     hybrid_xvec_norm: float
     duration_s: float
     cos_base_tau: float
-    """cos(base_xvec, τ). Predicts τ responsiveness for this speaker:
-    >0.1 strong direction overlap; near 0 mostly orthogonal (push is angular);
-    <0 partially cancels the base direction. cf. docs/deploy_caveats.md §3."""
     cos_base_hybrid: float
-    """cos(base_xvec, hybrid_xvec). Realized angular shift in x-vec space.
-    Close to 1.0 → barely moved; <0.99 → noticeable rotation."""
 
     def as_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 
 def _f32_norm(t: torch.Tensor) -> float:
-    """Norm in float32 (base xvec is bfloat16 from the model; bf16 step in
-    [16, 32) is 0.125, so bf16 norm reporting can mask small but real
-    α-induced changes)."""
+    """Calcula a norma em float32 para expor variações menores que o passo do bfloat16."""
     return float(t.detach().float().norm().item())
 
 
@@ -96,14 +75,7 @@ def preprocess_to_24k_mono(
     start_s: float = 0.0,
     duration_s: float | None = None,
 ) -> str:
-    """Resample to mono 24 kHz with N dB of headroom (clip-safe), optional crop.
-
-    Matches the emoUERJ pre-proc from session_report_2026-05-21 §1/§8:
-    `ffmpeg -af "volume=-1dB" -ar 24000 -ac 1`. The optional crop
-    (`-ss start_s -t duration_s`, placed after `-i` for accurate seek)
-    mitigates ICL ref-prosody leakage on long calm references —
-    cf. `docs/deploy_caveats.md` §1 axis 5.
-    """
+    """Reamostra para mono com atenuação e corte opcional, em segundos."""
     ffmpeg = _require_ffmpeg()
     Path(out_path).parent.mkdir(parents=True, exist_ok=True)
     cmd: list[str] = [ffmpeg, '-y', '-i', in_path]
@@ -112,9 +84,12 @@ def preprocess_to_24k_mono(
     if duration_s is not None:
         cmd += ['-t', f'{duration_s:.3f}']
     cmd += [
-        '-af', f'volume=-{headroom_db}dB',
-        '-ar', str(target_sr),
-        '-ac', '1',
+        '-af',
+        f'volume=-{headroom_db}dB',
+        '-ar',
+        str(target_sr),
+        '-ac',
+        '1',
         out_path,
     ]
     subprocess.run(cmd, check=True, capture_output=True)
@@ -124,6 +99,7 @@ def preprocess_to_24k_mono(
 def transcribe_ref(audio_path: str, language: str = DEFAULT_ASR_LANGUAGE) -> str:
     """Whisper-large-v3 transcription, default language=PT (deployment scenario)."""
     from src.metrics.asr import transcribe
+
     return transcribe(audio_path, language=language)
 
 
@@ -138,7 +114,7 @@ def resolve_tau_file(
             f'τ artifact not found: {path}. '
             f'Available emotions: angry, happy, sad. '
             f'Available variants: avg4spk, single0017. '
-            f'Extract via `scripts/extract_xvec_tau.py`.'
+            f'Extract via `scripts/repro/extract_xvec_tau.py`.'
         )
     return str(path)
 
@@ -164,42 +140,11 @@ def emotionize_audio(
     tts: Any | None = None,
     max_new_tokens: int = 2048,
 ) -> EmotionizeResult:
-    """Emotion-shift `base_audio` and write the result to `output_path`.
+    """Sintetiza text com a referência editada por alpha*tau.
 
-    `text` (what to *say*) and `ref_text` (transcript of the *reference audio*)
-    are independent:
-      - `text=None, ref_text=None`  → both auto-transcribed (clone same words).
-      - `text="...", ref_text=None` → say new text; ref transcript auto-transcribed.
-      - `text="...", ref_text="..."`→ both explicit (skips Whisper entirely).
-
-    Args:
-        base_audio: any ffmpeg-readable file (wav, opus, mp3, m4a, …).
-        output_path: where to write the emotionized 24 kHz mono WAV.
-        text: synth text — what the output will say. None → mirror `ref_text`.
-        ref_text: transcript of `base_audio` for the voice-clone prompt.
-                  None → auto-transcribe with Whisper (`asr_language`).
-        emotion: one of {"angry", "happy", "sad"}.
-        tau_variant: one of {"avg4spk", "single0017"} (see §4.2 of session report).
-        alpha: τ scaling factor. Best-α for PT-BR angry/avg4spk paired = 2.5.
-        tau_dir: directory containing tau_<emo>_<variant>.pt artifacts.
-        model_path: Qwen3-TTS checkpoint dir.
-        language: Qwen `generate_voice_clone` language flag.
-        asr_language: Whisper language for auto-transcription.
-        target_sr: target sample rate for the preprocessed reference (24 kHz).
-        headroom_db: pre-resample attenuation, dB (-1 dB recommended).
-        ref_start_s: ffmpeg `-ss` (seek) into `base_audio` before clipping.
-        ref_duration_s: ffmpeg `-t` (duration in s) to clip the reference.
-                        Recommended 3–6 s on long calm refs to match the
-                        ESD/emoUERJ training distribution and mitigate ICL
-                        prosody leakage (cf. docs/deploy_caveats.md §1 axis 5).
-                        None → no crop (use full input).
-        preprocessed_path: where to cache the 24k mono ref; default: alongside output.
-        tts: pre-loaded Qwen3TTSModel to avoid the ~10 s reload (optional).
-        max_new_tokens: cap on generated audio tokens.
-
-    Returns:
-        EmotionizeResult with all paths + norms for downstream logging.
-    """
+    ref_text transcreve base_audio; quando ausente, usa Whisper. text ausente
+    reutiliza ref_text. O pré-processamento aceita corte por início e duração.
+    Retorna caminhos, transcrições, normas e cossenos do embedding."""
     base_path = Path(base_audio)
     if not base_path.exists():
         raise FileNotFoundError(f'base_audio not found: {base_audio}')
@@ -211,17 +156,19 @@ def emotionize_audio(
             Path(output_path).with_name(f'{Path(output_path).stem}__ref24k.wav')
         )
     preprocess_to_24k_mono(
-        str(base_path), preprocessed_path,
-        target_sr=target_sr, headroom_db=headroom_db,
-        start_s=ref_start_s, duration_s=ref_duration_s,
+        str(base_path),
+        preprocessed_path,
+        target_sr=target_sr,
+        headroom_db=headroom_db,
+        start_s=ref_start_s,
+        duration_s=ref_duration_s,
     )
 
     if ref_text is None:
         ref_text = transcribe_ref(preprocessed_path, language=asr_language)
     if not ref_text.strip():
         raise ValueError(
-            'Empty reference text (transcription returned ""). '
-            'Provide `ref_text=...` explicitly.'
+            'Empty reference text (transcription returned ""). Provide `ref_text=...` explicitly.'
         )
     synth_text = text if (text is not None and text.strip()) else ref_text
 
@@ -234,8 +181,13 @@ def emotionize_audio(
     hybrid_xvec = base_xvec + alpha * tau_dev
 
     wav, sr = synthesize_with_xvec(
-        tts, synth_text, preprocessed_path, ref_text, hybrid_xvec,
-        language=language, max_new_tokens=max_new_tokens,
+        tts,
+        synth_text,
+        preprocessed_path,
+        ref_text,
+        hybrid_xvec,
+        language=language,
+        max_new_tokens=max_new_tokens,
     )
     if wav is None:
         raise RuntimeError('Synthesis returned no audio (empty wavs list).')
@@ -286,9 +238,12 @@ def emotionize_many(
     tts = load_tts(model_path)
     preprocessed_path = str(out_dir / f'{Path(base_audio).stem}__ref24k.wav')
     preprocess_to_24k_mono(
-        base_audio, preprocessed_path,
-        target_sr=target_sr, headroom_db=headroom_db,
-        start_s=ref_start_s, duration_s=ref_duration_s,
+        base_audio,
+        preprocessed_path,
+        target_sr=target_sr,
+        headroom_db=headroom_db,
+        start_s=ref_start_s,
+        duration_s=ref_duration_s,
     )
     if ref_text is None:
         ref_text = transcribe_ref(preprocessed_path, language=asr_language)

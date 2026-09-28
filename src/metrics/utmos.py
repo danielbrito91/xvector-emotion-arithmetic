@@ -16,7 +16,7 @@ DISABLE_MIXUP_INNER = True  # training-time augmentation; halves CPU spectrogram
 def _resolve_device() -> str:
     import torch
 
-    return "cuda" if torch.cuda.is_available() else "cpu"
+    return 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
 @lru_cache(maxsize=1)
@@ -34,11 +34,11 @@ def _load_model():
 
 def _predict_kwargs() -> dict:
     return {
-        "device": _resolve_device(),
-        "batch_size": DEFAULT_BATCH_SIZE,
-        "num_workers": DEFAULT_NUM_WORKERS,
-        "remove_silent_section": REMOVE_SILENT_SECTION,
-        "verbose": False,
+        'device': _resolve_device(),
+        'batch_size': DEFAULT_BATCH_SIZE,
+        'num_workers': DEFAULT_NUM_WORKERS,
+        'remove_silent_section': REMOVE_SILENT_SECTION,
+        'verbose': False,
     }
 
 
@@ -49,7 +49,7 @@ def score_wav(path: str) -> float:
 def score_dir(dir_path: str) -> dict[str, float]:
     """Batch-score all wavs in dir_path (no recursion). Returns {basename: mos}."""
     results = _load_model().predict(input_dir=dir_path, **_predict_kwargs())
-    return {Path(r["file_path"]).name: float(r["predicted_mos"]) for r in results}
+    return {Path(r['file_path']).name: float(r['predicted_mos']) for r in results}
 
 
 def score_wavs(paths: list[str]) -> dict[str, float]:
@@ -61,16 +61,16 @@ def score_wavs(paths: list[str]) -> dict[str, float]:
     if not paths:
         return {}
     paths = [str(p) for p in paths]
-    with tempfile.TemporaryDirectory(prefix="utmos_") as td:
+    with tempfile.TemporaryDirectory(prefix='utmos_') as td:
         link_to_orig: dict[str, str] = {}
         for i, p in enumerate(paths):
-            link_name = f"{i:06d}_{Path(p).name}"
+            link_name = f'{i:06d}_{Path(p).name}'
             link_path = os.path.join(td, link_name)
             os.symlink(os.path.abspath(p), link_path)
             link_to_orig[link_name] = p
         results = _load_model().predict(input_dir=td, **_predict_kwargs())
     return {
-        link_to_orig[Path(r["file_path"]).name]: float(r["predicted_mos"])
+        link_to_orig[Path(r['file_path']).name]: float(r['predicted_mos'])
         for r in results
-        if Path(r["file_path"]).name in link_to_orig
+        if Path(r['file_path']).name in link_to_orig
     }

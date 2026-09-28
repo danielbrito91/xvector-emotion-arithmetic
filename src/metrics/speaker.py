@@ -22,9 +22,7 @@ def get_speaker_embedding(audio_path: str, model_name: str = MODEL_NAME) -> torc
         waveform = torchaudio.functional.resample(waveform, sr, 16000)
     if waveform.shape[0] > 1:
         waveform = waveform.mean(dim=0, keepdim=True)
-    inputs = extractor(
-        waveform.squeeze().numpy(), sampling_rate=16000, return_tensors='pt'
-    )
+    inputs = extractor(waveform.squeeze().numpy(), sampling_rate=16000, return_tensors='pt')
     inputs = {k: v.to(device) for k, v in inputs.items()}
     with torch.no_grad():
         emb = model(**inputs).embeddings

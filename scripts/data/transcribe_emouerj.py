@@ -33,9 +33,7 @@ def _normalize(text: str) -> str:
     return text
 
 
-_NORMALIZED_CANDIDATES: list[tuple[str, str]] = [
-    (s, _normalize(s)) for s in CANONICAL_SENTENCES
-]
+_NORMALIZED_CANDIDATES: list[tuple[str, str]] = [(s, _normalize(s)) for s in CANONICAL_SENTENCES]
 
 
 def match_canonical(hypothesis: str) -> tuple[str, float]:
@@ -144,10 +142,7 @@ def main() -> None:
             out_row['transcript'] = canonical
             out_row['match_score'] = round(score, 4)
             if score < args.low_score_threshold:
-                print(
-                    f'[low-match {score:.2f}] {file_name}: '
-                    f'whisper="{text}" -> "{canonical}"'
-                )
+                print(f'[low-match {score:.2f}] {file_name}: whisper="{text}" -> "{canonical}"')
 
         pd.DataFrame([out_row]).to_csv(
             output_path,

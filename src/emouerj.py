@@ -67,21 +67,29 @@ PAIRED: dict[str, dict[str, dict[str, str]]] = {
 XTEXT: dict[str, dict] = {
     'w04': {
         'neutral_refs': [
-            'w04n06', 'w04n07', 'w04n08', 'w04n09', 'w04n10',   # G - "A garrafa…"
-            'w04n01', 'w04n02', 'w04n03', 'w04n04', 'w04n05',   # T - "Eu estou um pouco atrasado."
+            'w04n06',
+            'w04n07',
+            'w04n08',
+            'w04n09',
+            'w04n10',
+            'w04n01',
+            'w04n02',
+            'w04n03',
+            'w04n04',
+            'w04n05',
         ],
         'angry': {
-            'B': [f'w04a{i:02d}' for i in range(1, 13)],         # n=12
-            'M': [f'w04a{i:02d}' for i in range(13, 17)],        # n=4
+            'B': [f'w04a{i:02d}' for i in range(1, 13)],
+            'M': [f'w04a{i:02d}' for i in range(13, 17)],
         },
         'happy': {
             # w04h01 = "Não importa quem está certo." (n=1) → omitted by default.
-            'Q': [f'w04h{i:02d}' for i in range(2, 13)],         # n=11
+            'Q': [f'w04h{i:02d}' for i in range(2, 13)],
         },
         'sad': {
-            'D': [f'w04s{i:02d}' for i in range(1, 11)],         # n=10
-            'F': [f'w04s{i:02d}' for i in range(11, 15)],        # n=4
-            'B': [f'w04s{i:02d}' for i in range(15, 19)],        # n=4
+            'D': [f'w04s{i:02d}' for i in range(1, 11)],
+            'F': [f'w04s{i:02d}' for i in range(11, 15)],
+            'B': [f'w04s{i:02d}' for i in range(15, 19)],
         },
     },
 }

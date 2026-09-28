@@ -1,26 +1,7 @@
-"""Deploy-time CLI: emotion-shift any audio file via x-vector arithmetic.
+"""CLI de controle emocional por aritmética no embedding de falante.
 
-Wraps `src.emotionize` (single α + α-sweep). Whisper PT auto-transcribes the
-reference audio; `--text` overrides what the output *says* (clone the voice but
-say something new); `--ref-text` overrides the reference transcript itself
-(skips Whisper entirely if you know it).
-
-Examples:
-
-    # Clone same words as zap.opus, but angry (recommended deploy defaults):
-    PYTHONPATH=. uv run python scripts/deploy/emotionize_audio.py \\
-        --input data/zap.opus --output data/angry_zap.wav
-
-    # Same voice (zap.opus), but say something new — angrily:
-    PYTHONPATH=. uv run python scripts/deploy/emotionize_audio.py \\
-        --input data/zap.opus --output data/angry_new.wav \\
-        --text "Eu não acredito que você fez isso de novo!"
-
-    # α-sweep (operating-point search):
-    PYTHONPATH=. uv run python scripts/deploy/emotionize_audio.py \\
-        --input data/zap.opus --output-dir data/experiments/zap_sweep \\
-        --alpha 0.0 --alpha 1.0 --alpha 1.5 --alpha 2.0 --alpha 2.5
-"""
+--text define o texto sintetizado; --ref-text fornece a transcrição da referência.
+Aceita um valor de alpha ou uma varredura. Veja os exemplos no README."""
 
 from __future__ import annotations
 
@@ -70,48 +51,96 @@ app = typer.Typer(
 
 @app.command()
 def main(
-    input: Annotated[str, typer.Option(
-        '--input', '-i', help='Base audio (wav/opus/mp3/m4a/…).',
-    )],
-    output: Annotated[str | None, typer.Option(
-        '--output', '-o', help='Output wav (single-α mode).',
-    )] = None,
-    output_dir: Annotated[str | None, typer.Option(
-        '--output-dir', help='Output dir (α-sweep mode; one wav per α).',
-    )] = None,
-    alpha: Annotated[list[float], typer.Option(
-        '--alpha', '-a',
-        help='τ scaling factor. Pass multiple --alpha for sweep mode.',
-    )] = [DEFAULT_ALPHA],
-    emotion: Annotated[Emotion, typer.Option(
-        '--emotion', '-e', help='Target emotion.',
-    )] = Emotion.angry,
-    tau_variant: Annotated[TauVariant, typer.Option(
-        '--tau-variant', help='τ artifact variant (see §4.2 of session report).',
-    )] = TauVariant.avg4spk,
-    text: Annotated[str | None, typer.Option(
-        '--text', '-t',
-        help='What the output should SAY. Defaults to ref transcript (same words).',
-    )] = None,
-    ref_text: Annotated[str | None, typer.Option(
-        '--ref-text',
-        help='Transcript of the input audio. Defaults to Whisper auto-transcription.',
-    )] = None,
-    asr_language: Annotated[str, typer.Option(
-        '--asr-language', help='Whisper language for auto-transcription.',
-    )] = DEFAULT_ASR_LANGUAGE,
-    language: Annotated[str, typer.Option(
-        '--language', help='Qwen voice-clone language flag.',
-    )] = DEFAULT_LANGUAGE,
-    ref_start: Annotated[float, typer.Option(
-        '--ref-start',
-        help='ffmpeg -ss (s) — start time to crop the reference audio.',
-    )] = 0.0,
-    ref_duration: Annotated[float | None, typer.Option(
-        '--ref-duration',
-        help='ffmpeg -t (s) — duration to crop. 3–6 s recommended on '
-             'long calm refs to match ESD/emoUERJ distribution. None = full input.',
-    )] = None,
+    input: Annotated[
+        str,
+        typer.Option(
+            '--input',
+            '-i',
+            help='Base audio (wav/opus/mp3/m4a/…).',
+        ),
+    ],
+    output: Annotated[
+        str | None,
+        typer.Option(
+            '--output',
+            '-o',
+            help='Output wav (single-α mode).',
+        ),
+    ] = None,
+    output_dir: Annotated[
+        str | None,
+        typer.Option(
+            '--output-dir',
+            help='Output dir (α-sweep mode; one wav per α).',
+        ),
+    ] = None,
+    alpha: Annotated[
+        list[float],
+        typer.Option(
+            '--alpha',
+            '-a',
+            help='τ scaling factor. Pass multiple --alpha for sweep mode.',
+        ),
+    ] = [DEFAULT_ALPHA],
+    emotion: Annotated[
+        Emotion,
+        typer.Option(
+            '--emotion',
+            '-e',
+            help='Target emotion.',
+        ),
+    ] = Emotion.angry,
+    tau_variant: Annotated[
+        TauVariant,
+        typer.Option(
+            '--tau-variant',
+            help='Variante de tau: avg4spk ou single0017.',
+        ),
+    ] = TauVariant.avg4spk,
+    text: Annotated[
+        str | None,
+        typer.Option(
+            '--text',
+            '-t',
+            help='What the output should SAY. Defaults to ref transcript (same words).',
+        ),
+    ] = None,
+    ref_text: Annotated[
+        str | None,
+        typer.Option(
+            '--ref-text',
+            help='Transcript of the input audio. Defaults to Whisper auto-transcription.',
+        ),
+    ] = None,
+    asr_language: Annotated[
+        str,
+        typer.Option(
+            '--asr-language',
+            help='Whisper language for auto-transcription.',
+        ),
+    ] = DEFAULT_ASR_LANGUAGE,
+    language: Annotated[
+        str,
+        typer.Option(
+            '--language',
+            help='Qwen voice-clone language flag.',
+        ),
+    ] = DEFAULT_LANGUAGE,
+    ref_start: Annotated[
+        float,
+        typer.Option(
+            '--ref-start',
+            help='ffmpeg -ss (s) — start time to crop the reference audio.',
+        ),
+    ] = 0.0,
+    ref_duration: Annotated[
+        float | None,
+        typer.Option(
+            '--ref-duration',
+            help='ffmpeg -t (s) — duration to crop. 3–6 s recommended on '
+            'long calm refs to match ESD/emoUERJ distribution. None = full input.',
+        ),
+    ] = None,
     tau_dir: Annotated[str, typer.Option('--tau-dir')] = DEFAULT_TAU_DIR,
     model_path: Annotated[str, typer.Option('--model-path')] = DEFAULT_MODEL_PATH,
     target_sr: Annotated[int, typer.Option('--target-sr')] = DEFAULT_TARGET_SR,
