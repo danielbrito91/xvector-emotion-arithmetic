@@ -1,19 +1,19 @@
 # Training-Free Cross-Lingual Emotion Control in LM-TTS via Speaker-Channel Editing
 
-Código do estudo de controle emocional em Qwen3-TTS-12Hz-1.7B-Base, por Daniel O. Brito, Sidney E. Leal e Arnaldo Candido Junior. Esta versão contém o método e parte das análises do manuscrito revisado em setembro de 2026; a disponibilização das receitas experimentais está em andamento. O [preprint público, arXiv v2](https://arxiv.org/abs/2606.05367v2), contém a versão anterior do estudo.
+Code for the emotion-control study on Qwen3-TTS-12Hz-1.7B-Base by Daniel O. Brito, Sidney E. Leal, and Arnaldo Candido Junior. This release includes the method and part of the analyses from the manuscript revised in September 2026. The remaining experimental recipes are still being prepared for release.
 
-O método extrai direções emocionais de gravações inglesas e as aplica ao embedding de falante de uma voz alvo, mantendo os tokens da referência neutra:
+The method extracts emotion directions from English recordings and applies them to the speaker embedding of a target voice while retaining the tokens from its neutral reference:
 
 ```python
 tau = mean_s(centroid(s, emotion) - centroid(s, neutral))
 x_edited = x_target_neutral + alpha * tau
 ```
 
-O fatorial neutro/raiva mostra maior efeito médio do embedding, com contribuição conjunta dos tokens e inversão da ordem em um dos quatro falantes. As direções transferem controle a vozes inglesas e brasileiras. A avaliação cobre ESD, emoUERJ, CREMA-D e VERBO; os dois últimos são avaliações exploratórias com força selecionada apenas em inglês. O teste de escuta usa forças calibradas por falante, fixadas antes da coleta.
+The neutral/angry factorial shows a larger mean effect from the speaker embedding, with contributions from both tokens and embedding and a reversal in their ordering for one of four speakers. The directions transfer emotion control to English and Brazilian Portuguese target voices. Evaluation covers ESD, emoUERJ, CREMA-D, and VERBO; the latter two are exploratory evaluations with alpha selected using English data only. The listening test uses speaker-calibrated strengths fixed before data collection.
 
-## Instalação
+## Installation
 
-Requer Python 3.12+, `uv` e `ffmpeg`. A síntese usa PyTorch/CUDA. O ambiente Python está fixado em `uv.lock`.
+Requires Python 3.12+, `uv`, and `ffmpeg`. Synthesis uses PyTorch/CUDA. Python dependencies are locked in `uv.lock`.
 
 ```bash
 uv sync --locked
@@ -22,11 +22,11 @@ uv run hf download Qwen/Qwen3-TTS-Tokenizer-12Hz --local-dir ./Qwen3-TTS-Tokeniz
 export PYTHONPATH=.
 ```
 
-As métricas baixam seus próprios modelos no primeiro uso: emotion2vec+ large, SenseVoiceSmall, WavLM-base-plus-sv e Whisper-large-v3. Os scripts históricos também calculam UTMOSv2, que não integra as tabelas do manuscrito atual.
+The metrics download their own models on first use: emotion2vec+ large, SenseVoiceSmall, WavLM-base-plus-sv, and Whisper-large-v3. Historical scripts also compute UTMOSv2, which is not included in the current manuscript tables.
 
-## Inferência
+## Inference
 
-As seis direções em `data/tau/` acompanham o código. Cada `.pt` contém o vetor de 2048 dimensões, centroides e metadados de extração.
+The six emotion directions in `data/tau/` are included. Each `.pt` file contains a 2,048-dimensional vector, centroids, and extraction metadata.
 
 ```bash
 uv run python scripts/deploy/emotionize_audio.py \
@@ -35,11 +35,11 @@ uv run python scripts/deploy/emotionize_audio.py \
   --ref-text "Transcrição da referência." --text "Texto a sintetizar."
 ```
 
-Sem `--ref-text`, Whisper transcreve a referência. Sem `--text`, o sistema sintetiza sua transcrição. A receita selecionada apenas em inglês usa `avg4spk`, com alpha 2.5 para angry/sad e 1.5 para happy. Esses valores são pontos de operação do estudo, sem garantia de intensidade uniforme em qualquer voz.
+Without `--ref-text`, Whisper transcribes the reference. Without `--text`, the system synthesizes that transcription. The English-only selection uses `avg4spk`, with alpha 2.5 for angry/sad and 1.5 for happy. These are operating points from the study, with no guarantee of uniform intensity across voices.
 
-## Dados e reprodução
+## Data and reproduction
 
-ESD fornece as direções, com 50 gravações por emoção e falante: 0011, 0014, 0017 e 0020. O comparador de fonte única usa 0017. A avaliação inglesa usa 0013 e 0019; a brasileira usa m03, m04 e w04 do emoUERJ. CREMA-D e VERBO acrescentam 12 falantes por corpus.
+ESD provides the directions, using 50 recordings per emotion and speaker: 0011, 0014, 0017, and 0020. The single-source comparator uses 0017. English evaluation uses 0013 and 0019; Brazilian Portuguese evaluation uses m03, m04, and w04 from emoUERJ. CREMA-D and VERBO add 12 speakers per corpus.
 
 ```bash
 export DATA_ROOT="$HOME/data/processed"
@@ -48,43 +48,31 @@ export EMOUERJ_ROOT="$DATA_ROOT/emouerj_24k"
 export ESD_RAW_ROOT="$HOME/data/external/Emotional Speech Dataset (ESD)/Emotion Speech Dataset"
 ```
 
-O ESD usa subpastas de falante/emoção; o emoUERJ usa arquivos como `m03a01.wav` na raiz reamostrada. `scripts/data/resample_esd.py --help` descreve a preparação do ESD. Corpora, áudios sintetizados, checkpoints e respostas individuais do MOS ficam fora do Git.
+ESD uses speaker/emotion subdirectories; emoUERJ uses files such as `m03a01.wav` at the root of the resampled corpus. `scripts/data/resample_esd.py --help` describes ESD preparation. Corpora, synthesized audio, checkpoints, and individual MOS responses are excluded from Git.
 
-| Resultado | Disponível neste recorte |
+| Result | Available in this release |
 | --- | --- |
-| Inferência e extração de direções | `scripts/deploy/emotionize_audio.py`, `scripts/repro/extract_xvec_tau.py` |
-| ESD/emoUERJ: sweeps e Tabela 2 | `run_en2en_sweep.py`, `run_ptbr_sweep.py`, `analyze_gap4_eca_esim.py`, `analyze_icassp_revision.py` |
-| Fatorial tokens × embedding, Tabela 1 | Análise de escores existentes em `analyze_icassp_revision.py`; geração das quatro condições pendente |
-| CREMA-D/VERBO, Tabela 2 | Análise de manifestos e escores existentes em `analyze_cross_corpus.py`; aquisição e síntese pendentes |
-| EMOS/NMOS, Tabela 3 | `scripts/mos_power/analyze_mos.py`; entradas públicas anonimizadas pendentes |
-| Controles de norma casada | Receita ainda pendente neste recorte |
+| Inference and direction extraction | `scripts/deploy/emotionize_audio.py`, `scripts/repro/extract_xvec_tau.py` |
+| ESD/emoUERJ sweeps and Table 2 | `run_en2en_sweep.py`, `run_ptbr_sweep.py`, `analyze_gap4_eca_esim.py`, `analyze_icassp_revision.py` |
+| Tokens × embedding factorial, Table 1 | Analysis of existing scores in `analyze_icassp_revision.py`; generation of the four conditions is pending |
+| CREMA-D/VERBO, Table 2 | Analysis of existing manifests and scores in `analyze_cross_corpus.py`; corpus acquisition and synthesis are pending |
+| EMOS/NMOS, Table 3 | `scripts/mos_power/analyze_mos.py`; anonymized public inputs are pending |
+| Matched-norm controls | Recipe pending in this release |
 
-Os nomes sem diretório estão em `scripts/repro/`. O [guia de reprodução](scripts/repro/README.md) descreve entradas e comandos. A publicação parcial não permite reproduzir todas as tabelas a partir dos corpora. As explorações já publicadas em `scripts/elimination/`, `src/lora.py` e `third_party/qwen/` permanecem disponíveis.
+Paths shown without a directory are under `scripts/repro/`. The [reproduction guide](scripts/repro/README.md) describes inputs and commands. This partial release cannot reproduce every table from the corpora alone. Previously published explorations in `scripts/elimination/`, `src/lora.py`, and `third_party/qwen/` remain available.
 
-## Organização
+## Repository layout
 
 ```text
-src/                    aritmética, síntese, dados e métricas
-scripts/data/           preparação dos corpora
-scripts/deploy/         inferência a partir de uma referência
-scripts/repro/          experimentos, análises e configurações
-scripts/mos_power/      análise da escuta
-third_party/qwen/       adaptação do fine-tuning Qwen3-TTS
-data/tau/               direções emocionais pré-calculadas
+src/                    vector arithmetic, synthesis, data, and metrics
+scripts/data/           corpus preparation
+scripts/deploy/         reference-based inference
+scripts/repro/          experiments, analyses, and configurations
+scripts/mos_power/      listening-test analysis
+third_party/qwen/       Qwen3-TTS fine-tuning adaptation
+data/tau/               precomputed emotion directions
 ```
 
-## Citação
+## Citation
 
-A referência abaixo identifica o preprint público v2. Seu título e autoria antecedem o manuscrito revisado descrito nesta versão do código.
-
-```bibtex
-@misc{brito2026taskvector,
-  title = {Task-Vector Arithmetic for Emotional Expressivity Control in Language-Model-Based Text-to-Speech},
-  author = {Brito, Daniel Oliveira de and Candido Junior, Arnaldo},
-  year = {2026},
-  eprint = {2606.05367},
-  archivePrefix = {arXiv},
-  primaryClass = {cs.SD},
-  url = {https://arxiv.org/abs/2606.05367v2}
-}
-```
+For citation, use the current metadata at [arXiv:2606.05367](https://arxiv.org/abs/2606.05367).

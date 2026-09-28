@@ -1,10 +1,10 @@
-# Reprodução e análises
+# Reproduction and analyses
 
-Execute os comandos na raiz do repositório com `PYTHONPATH=.` e o ambiente de `uv.lock`. Os caminhos dos corpora são definidos no [README principal](../../README.md). Este recorte inclui inferência, extração de direções, sweeps ESD/emoUERJ e análises de escores existentes. Ainda faltam receitas públicas de geração do fatorial, síntese cross-corpus e controles de norma casada, além das entradas anonimizadas do MOS.
+Run these commands from the repository root with `PYTHONPATH=.` and the environment specified by `uv.lock`. Corpus paths are defined in the [main README](../../README.md). This release includes inference, direction extraction, ESD/emoUERJ sweeps, and analyses of existing scores. Public recipes for factorial generation, cross-corpus synthesis, and matched-norm controls, as well as anonymized MOS inputs, are still pending.
 
-## Direções e sweeps
+## Directions and sweeps
 
-Os arquivos `.pt` contêm tau, centroides, configuração e estatísticas. Para reconstruí-los a partir do ESD:
+The `.pt` files contain tau, centroids, configuration, and statistics. To reconstruct them from ESD:
 
 ```bash
 PYTHONPATH=. uv run python scripts/repro/extract_xvec_tau.py \
@@ -22,13 +22,13 @@ PYTHONPATH=. uv run python scripts/repro/analyze_icassp_revision.py --sections o
   --output data/experiments/icassp_objective.json
 ```
 
-A reanálise usa `data/experiments/gap4_eca_esim.parquet`, gerado pelo passe de classificação, e `results_long.parquet`/`results_long_ptbr.parquet`, gerados pelos sweeps. Alpha calibrado por falante maximiza a similaridade emocional na própria célula avaliada. Alpha selecionado apenas em inglês usa `avg4spk` e a grade comum `{0, 1, 1.5, 2, 2.5}`, transferindo angry=2.5, happy=1.5 e sad=2.5 ao português. Os testes verificam a independência dessa seleção em relação aos escores portugueses.
+The reanalysis uses `data/experiments/gap4_eca_esim.parquet`, produced by the scoring pass, and `results_long.parquet`/`results_long_ptbr.parquet`, produced by the sweeps. Speaker-calibrated alpha maximizes emotion similarity within each evaluated cell. English-only alpha selection uses `avg4spk` and the shared grid `{0, 1, 1.5, 2, 2.5}`, transferring angry=2.5, happy=1.5, and sad=2.5 to Portuguese. The tests verify that this selection does not depend on Portuguese scores.
 
-A opção `--selftest` de `analyze_gap4_eca_esim.py` calcula referências naturais de ECA e similaridade. `compute_gt_ceiling.py` e `compute_gt_ceiling_ptbr.py` também avaliam identidade, WER e UTMOS. O UTMOS permanece nas saídas históricas, embora não integre as tabelas atuais. Os sweeps aceitam `--combination convex` para interpolação com o centroide emocional, incluindo substituição em beta=1.
+The `--selftest` option of `analyze_gap4_eca_esim.py` computes natural ECA and similarity references. `compute_gt_ceiling.py` and `compute_gt_ceiling_ptbr.py` also evaluate identity, WER, and UTMOS. UTMOS remains in historical outputs but is not included in the current tables. The sweeps accept `--combination convex` for interpolation toward the emotional centroid, including full replacement at beta=1.
 
-## Fatorial de condicionamento
+## Conditioning factorial
 
-A análise recebe 1.600 registros: quatro falantes × dez referências × dez textos × quatro condições. Em `balanced`, cada linha de `scores.jsonl` contém `key`, `speaker` como string, `ref`, `utt`, `condition`, `wav_path`, `sha256`, `eca_e2v`, `eca_sv`, `duration_s`, `wer_norm` e `spk_cos_sim_neutral_wavlm`. Os caminhos de áudio precisam ser acessíveis para conferir os hashes. As condições são `neutral_baseline`, `full_swap`, `xvec_swap` e `angry_baseline`.
+The analysis takes 1,600 records: four speakers × ten references × ten texts × four conditions. In the `balanced` layout, each `scores.jsonl` row contains `key`, `speaker` as a string, `ref`, `utt`, `condition`, `wav_path`, `sha256`, `eca_e2v`, `eca_sv`, `duration_s`, `wer_norm`, and `spk_cos_sim_neutral_wavlm`. Audio paths must be accessible to verify their hashes. The conditions are `neutral_baseline`, `full_swap`, `xvec_swap`, and `angry_baseline`.
 
 ```bash
 PYTHONPATH=. uv run python scripts/repro/analyze_icassp_revision.py \
@@ -36,24 +36,24 @@ PYTHONPATH=. uv run python scripts/repro/analyze_icassp_revision.py \
   --factorial data/experiments/conditioning_factorial
 ```
 
-Os falantes são 0011, 0013, 0017 e 0019; as referências usam índices 1–10 e os textos, 321–330. O bootstrap cruza referência e texto, condicionado aos quatro falantes observados. A sensibilidade mantém 380 unidades, retirando a referência 6 de 0011 e 0013 por discrepância lexical identificada antes da pontuação.
+The speakers are 0011, 0013, 0017, and 0019; references use indices 1–10 and texts use 321–330. The bootstrap crosses reference and text while conditioning on the four observed speakers. The sensitivity analysis retains 380 units, excluding reference 6 for 0011 and 0013 because of a lexical discrepancy identified before scoring.
 
-O leitor `historical` também aceita a execução original: `ar2_token_swap/{results,eca}.jsonl` e `conditioning_factorial_2026-09-06/{scores,sentinel_checks}.jsonl`, sob `data/experiments/`. Ele verifica as 12 sentinelas usadas para reaproveitar os três braços anteriores. Esses artefatos não acompanham o código. O gerador das quatro condições ainda não integra este recorte.
+The `historical` reader also accepts the original run: `ar2_token_swap/{results,eca}.jsonl` and `conditioning_factorial_2026-09-06/{scores,sentinel_checks}.jsonl` under `data/experiments/`. It verifies the 12 sentinels used to reuse the three earlier arms. These artifacts are not included with the code. The generator of the four conditions is still outside this release.
 
-## CREMA-D e VERBO
+## CREMA-D and VERBO
 
 ```bash
 PYTHONPATH=. uv run python scripts/repro/analyze_cross_corpus.py \
   --run data/experiments/cross_corpus_source_only_v2_exploratory
 ```
 
-Entradas: `scores.jsonl` e `manifest_synthesis.jsonl`. `cross_corpus_support.py` define os campos, valida o pareamento e calcula os agregados. São 12 falantes, seis textos e três sementes por corpus, com 864 saídas e 648 contrastes. Falhas de síntese permanecem no denominador; a baseline neutra é compartilhada pelos três contrastes emocionais. O bootstrap cruza falante e texto após média das sementes e emoções.
+Inputs are `scores.jsonl` and `manifest_synthesis.jsonl`. `cross_corpus_support.py` defines the fields, validates pairing, and computes aggregates. Each corpus has 12 speakers, six texts, and three seeds, yielding 864 outputs and 648 contrasts. Synthesis failures remain in the denominator; the neutral baseline is shared across the three emotion contrasts. The bootstrap crosses speaker and text after averaging over seeds and emotions.
 
-A configuração em `configs/cross_corpus_source_only.json` documenta a grade, os hashes de tau e a seleção de alpha em inglês. Na execução reportada, as transcrições VERBO l5 de f4/f6 foram corrigidas de “de seu João” para “do seu João” após escuta do piloto. A correção afeta 144 linhas de manifesto, sem alterar os áudios de referência. A avaliação é exploratória. A aquisição dos corpora e a geração dos áudios ainda não estão incluídas.
+The configuration in `configs/cross_corpus_source_only.json` documents the grid, tau hashes, and English-only alpha selection. In the reported run, the VERBO l5 transcripts for f4/f6 were corrected from “de seu João” to “do seu João” after listening to the pilot. This correction affects 144 manifest rows without changing the reference audio. The evaluation is exploratory. Corpus acquisition and audio generation are not yet included.
 
-## Escuta humana
+## Human listening test
 
-A análise remove respostas de participantes que erraram sondas PT, blocos EN sem CEFR B1 ou superior e páginas com duração insuficiente. Notas baixas em gravações naturais e escores extremos são mantidos. Naturalidade não perguntada permanece ausente. O mapping das condições é associado depois da limpeza.
+The analysis removes responses from participants who failed Portuguese attention probes, English blocks from participants below CEFR B1, and pages with insufficient duration. Low ratings of natural recordings and extreme scores are retained. Naturalness questions that were not asked remain missing. The condition mapping is joined only after cleaning.
 
 ```bash
 PYTHONPATH=. uv run python scripts/mos_power/analyze_mos.py \
@@ -64,11 +64,11 @@ PYTHONPATH=. uv run python scripts/mos_power/analyze_mos.py \
   --out_dir data/experiments/mos_reanalysis --unblind
 ```
 
-Sem `--unblind`, o comando produz somente os dados de limpeza. EMOS usa Wilcoxon pareado por enunciado e bootstrap de 10.000 réplicas; NMOS inclui não inferioridade com margem 0,5. Os alpha da escuta foram calibrados por falante antes da coleta, usando `single0017` em EN e `avg4spk` em PT-BR; essa avaliação não testa perceptualmente a seleção apenas em inglês.
+Without `--unblind`, the command produces cleaning data only. EMOS uses a paired Wilcoxon test by utterance and 10,000 bootstrap replicates; NMOS includes a non-inferiority test with a 0.5 MOS-point margin. Listening-test alpha values were calibrated per speaker before data collection, using `single0017` for English and `avg4spk` for Brazilian Portuguese; this evaluation does not perceptually test English-only alpha selection.
 
-Os dados brutos contêm identificadores pessoais e ficam fora do Git. Ainda é necessária uma versão anonimizada das respostas e dos artefatos dos estímulos para reprodução pública. A interface está no [repositório tts-eval](https://github.com/danielbrito91/tts-eval).
+The raw data contain personal identifiers and are excluded from Git. An anonymized version of the responses and stimulus artifacts is still needed for public reproduction. The interface is in the [tts-eval repository](https://github.com/danielbrito91/tts-eval).
 
-## Verificação local
+## Local verification
 
 ```bash
 PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=. uv run python scripts/repro/test_cross_corpus_source_only.py
@@ -76,4 +76,4 @@ PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=. uv run python scripts/repro/test_icassp_a
 PYTHONDONTWRITEBYTECODE=1 uv run python scripts/repro/check_release.py
 ```
 
-Os testes usam dados artificiais para verificar seleção de alpha, pareamento, denominadores e bootstrap. `check_release.py` confere os arquivos enumerados em `release_files.txt`, sua sintaxe e dependências locais. Nenhum desses comandos executa síntese em GPU. As explorações de fine-tuning dependem do `finetuning/dataset.py` do Qwen3-TTS; consulte [third_party/qwen/README.md](../../third_party/qwen/README.md).
+The tests use synthetic data to verify alpha selection, pairing, denominators, and bootstrap behavior. `check_release.py` checks the files listed in `release_files.txt`, their syntax, and local dependencies. None of these commands runs GPU synthesis. The fine-tuning explorations depend on Qwen3-TTS's `finetuning/dataset.py`; see [third_party/qwen/README.md](../../third_party/qwen/README.md).
